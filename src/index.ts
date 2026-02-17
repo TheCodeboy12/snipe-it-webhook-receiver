@@ -26,18 +26,18 @@ webhook.post(
     const body = await c.req.json()
     // check if the body is of type webhookUpdateSchema or webhookTestSchema
     if (webhookUpdateSchema.safeParse(body).success) {
-        return c.json({
-            success: true,
-            error: null,
-            message: "Update webhook received"
-        })
+      return c.json({
+        success: true,
+        error: null,
+        message: "Update webhook received"
+      })
     } else if (webhookTestSchema.safeParse(body).success) {
       console.log('webhookTestSchema')
-        return c.json({
-            success: true,
-            error: null,
-            message: "Test webhook received"
-        })
+      return c.json({
+        success: true,
+        error: null,
+        message: "Test webhook received"
+      })
     }
   }
 )
