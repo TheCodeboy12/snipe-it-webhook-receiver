@@ -66,7 +66,23 @@ app.post(
     '/',
     async (c: Context<{ Variables: { validatedBody: WebhookBody } }>) => {
         const body = c.get('validatedBody')
-        if (webhookUpdateSchema.safeParse(body).success) {
+        const updateResult = webhookUpdateSchema.safeParse(body)
+        if (updateResult.success) {
+            const forwardUrl = process.env.FORWARD_WEBHOOK_URL
+            if (forwardUrl) {
+                try {
+                    const forwardRes = await fetch(forwardUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updateResult.data)
+                    })
+                    if (!forwardRes.ok) {
+                        customLogger(`Forward to ${forwardUrl} failed: ${forwardRes.status} ${forwardRes.statusText}`)
+                    }
+                } catch (err) {
+                    customLogger(`Forward to ${forwardUrl} failed:`, err instanceof Error ? err.message : String(err))
+                }
+            }
             return c.json({
                 success: true,
                 error: null,

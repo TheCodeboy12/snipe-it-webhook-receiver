@@ -1,5 +1,5 @@
 {
-  "name": "bizzabo-snipeit-webhook",
+  "name": "snipeit-webhook",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
