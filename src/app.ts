@@ -19,8 +19,9 @@ function authByKey() {
             customLogger('Server auth key is not configured or is missing. Please check server environment variables.');
             return c.json({ success: false, error: 'Authentication error. Please contact an administrator.' }, 500)
         }
-        const key = c.req.query('key')
-        if (key !== expectedKey) {
+        const validKeySchema = z.literal(expectedKey)
+        const result = validKeySchema.safeParse(c.req.query('key'))
+        if (!result.success) {
             return c.json({ success: false, error: 'Unauthorized' }, 401)
         }
         await next()
