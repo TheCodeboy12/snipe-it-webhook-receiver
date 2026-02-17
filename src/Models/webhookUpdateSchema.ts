@@ -11,7 +11,7 @@ export const webhookUpdateSchema = z.strictObject({
           short: z.boolean()
         }),
       ),
-      text: z.string(),
+      text: z.string().optional(),
       title: z.string(),
       title_link: z.url(),
     }),
