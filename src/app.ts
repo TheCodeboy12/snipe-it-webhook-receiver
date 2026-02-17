@@ -9,12 +9,28 @@ const unionType = z.union([webhookUpdateSchema, webhookTestSchema])
 type WebhookBody = z.infer<typeof unionType>
 
 const customLogger = (message: string, ...rest: string[]) => {
-  console.log(`[${new Date().toISOString()}]`, message, ...rest)
+    console.log(`[${new Date().toISOString()}]`, message, ...rest)
+}
+
+function authByKey() {
+    return async (c: Context, next: () => Promise<void>) => {
+        const expectedKey = process.env.WEBHOOK_KEY
+        if (!expectedKey) {
+            customLogger('Server auth key is not configured or is missing. Please check server environment variables.');
+            return c.json({ success: false, error: 'Authentication error. Please contact an administrator.' }, 500)
+        }
+        const key = c.req.query('key')
+        if (key !== expectedKey) {
+            return c.json({ success: false, error: 'Unauthorized' }, 401)
+        }
+        await next()
+    }
 }
 
 export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
     .use(logger(customLogger))
     .use(cors())
+    .use(authByKey())
     .use(async (c, next) => {
         let text: string
         try {

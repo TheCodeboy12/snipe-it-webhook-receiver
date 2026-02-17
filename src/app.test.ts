@@ -1,12 +1,20 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { app } from './app.js'
+
+const TEST_KEY = 'test-webhook-secret'
 
 const json = (body: object) => ({
   body: JSON.stringify(body),
   headers: { 'Content-Type': 'application/json' }
 })
 
+const webhookUrl = (path = '/webhook') => `${path}?key=${encodeURIComponent(TEST_KEY)}`
+
 describe('POST /webhook', () => {
+  beforeAll(() => {
+    process.env.WEBHOOK_KEY = TEST_KEY
+  })
+
   const validUpdatePayload = {
     text: 'Update message',
     attachments: [
@@ -31,7 +39,7 @@ describe('POST /webhook', () => {
   }
 
   it('returns 200 and update message for valid webhook update payload', async () => {
-    const res = await app.request('/webhook', {
+    const res = await app.request(webhookUrl(), {
       method: 'POST',
       ...json(validUpdatePayload)
     })
@@ -46,7 +54,7 @@ describe('POST /webhook', () => {
   })
 
   it('returns 200 and test message for valid webhook test payload', async () => {
-    const res = await app.request('/webhook', {
+    const res = await app.request(webhookUrl(), {
       method: 'POST',
       ...json(validTestPayload)
     })
@@ -61,7 +69,7 @@ describe('POST /webhook', () => {
   })
 
   it('returns 400 with formatted error for invalid payload (missing required fields)', async () => {
-    const res = await app.request('/webhook', {
+    const res = await app.request(webhookUrl(), {
       method: 'POST',
       ...json({
         text: 'Missing attachments and other required fields'
@@ -81,7 +89,7 @@ describe('POST /webhook', () => {
   })
 
   it('returns 400 with formatted error for payload that matches neither schema', async () => {
-    const res = await app.request('/webhook', {
+    const res = await app.request(webhookUrl(), {
       method: 'POST',
       ...json({
         channel: '#general',
@@ -94,5 +102,27 @@ describe('POST /webhook', () => {
     const data = await res.json()
     expect(data.success).toBe(false)
     expect(data.error).toBeDefined()
+  })
+
+  it('returns 401 when key query param is missing', async () => {
+    const res = await app.request('/webhook', {
+      method: 'POST',
+      ...json(validTestPayload)
+    })
+    expect(res.status).toBe(401)
+    const data = await res.json()
+    expect(data.success).toBe(false)
+    expect(data.error).toBe('Unauthorized')
+  })
+
+  it('returns 401 when key query param is wrong', async () => {
+    const res = await app.request('/webhook?key=wrong-key', {
+      method: 'POST',
+      ...json(validTestPayload)
+    })
+    expect(res.status).toBe(401)
+    const data = await res.json()
+    expect(data.success).toBe(false)
+    expect(data.error).toBe('Unauthorized')
   })
 })
