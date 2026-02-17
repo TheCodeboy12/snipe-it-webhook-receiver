@@ -8,8 +8,12 @@ import { webhookTestSchema } from './Models/webhookTestSchema.js'
 const unionType = z.union([webhookUpdateSchema, webhookTestSchema])
 type WebhookBody = z.infer<typeof unionType>
 
+const customLogger = (message: string, ...rest: string[]) => {
+  console.log(`[${new Date().toISOString()}]`, message, ...rest)
+}
+
 export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
-    .use(logger())
+    .use(logger(customLogger))
     .use(cors())
     .use(async (c, next) => {
         let text: string
