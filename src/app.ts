@@ -1,6 +1,5 @@
 import { type Context, Hono } from 'hono'
 import { logger } from 'hono/logger'
-import { cors } from 'hono/cors'
 import { webhookUpdateSchema } from './Models/webhookUpdateSchema.js'
 import { z } from 'zod'
 import { webhookTestSchema } from './Models/webhookTestSchema.js'
@@ -30,7 +29,6 @@ function authByKey() {
 
 export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
     .use(logger(customLogger))
-    .use(cors())
     .use(authByKey())
     .use(async (c, next) => {
         let text: string
