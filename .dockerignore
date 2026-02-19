@@ -6,3 +6,12 @@ dist
 .env.*
 Dockerfile
 .dockerignore
+
+# Test files
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/__tests__
+**/test
+**/tests

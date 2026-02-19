@@ -2,6 +2,7 @@ import { type Context, Hono } from 'hono'
 import { webhookUpdateSchema } from './Models/webhookUpdateSchema.js'
 import { z } from 'zod'
 import { webhookTestSchema } from './Models/webhookTestSchema.js'
+import { logger } from 'hono/logger'{ logger }
 
 const unionType = z.union([webhookUpdateSchema, webhookTestSchema])
 type WebhookBody = z.infer<typeof unionType>
@@ -70,7 +71,7 @@ export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
         await next()
     })
     .basePath('/webhook')
-
+app.use(logger())
 app.post(
     '/',
     async (c: Context<{ Variables: { validatedBody: WebhookBody } }>) => {
