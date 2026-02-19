@@ -1,5 +1,4 @@
 import { type Context, Hono } from 'hono'
-import { logger } from 'hono/logger'
 import { webhookUpdateSchema } from './Models/webhookUpdateSchema.js'
 import { z } from 'zod'
 import { webhookTestSchema } from './Models/webhookTestSchema.js'
@@ -9,6 +8,18 @@ type WebhookBody = z.infer<typeof unionType>
 
 const customLogger = (message: string, ...rest: string[]) => {
     console.log(`[${new Date().toISOString()}]`, message, ...rest)
+}
+
+/** Logs method + pathname only. Never log URL query string (contains webhook key). */
+function safeRequestLogger() {
+    return async (c: Context, next: () => Promise<void>) => {
+        const pathname = new URL(c.req.url).pathname
+        customLogger('<--', c.req.method, pathname)
+        const start = Date.now()
+        await next()
+        const elapsed = Date.now() - start
+        customLogger('-->', c.req.method, pathname, String(c.res.status), `${elapsed}ms`)
+    }
 }
 
 function authByKey() {
@@ -28,7 +39,7 @@ function authByKey() {
 }
 
 export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
-    .use(logger(customLogger))
+    .use(safeRequestLogger())
     .use(authByKey())
     .use(async (c, next) => {
         let text: string

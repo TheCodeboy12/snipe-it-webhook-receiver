@@ -1,6 +1,7 @@
 {
   "name": "snipeit-webhook",
   "type": "module",
+  "engines": { "node": ">=18" },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
