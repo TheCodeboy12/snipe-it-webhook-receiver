@@ -2,7 +2,7 @@ import { type Context, Hono } from 'hono'
 import { webhookUpdateSchema } from './Models/webhookUpdateSchema.js'
 import { z } from 'zod'
 import { webhookTestSchema } from './Models/webhookTestSchema.js'
-import { logger } from 'hono/logger'{ logger }
+import { GoogleAuth } from 'google-auth-library'
 
 const unionType = z.union([webhookUpdateSchema, webhookTestSchema])
 type WebhookBody = z.infer<typeof unionType>
@@ -71,7 +71,7 @@ export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
         await next()
     })
     .basePath('/webhook')
-app.use(logger())
+
 app.post(
     '/',
     async (c: Context<{ Variables: { validatedBody: WebhookBody } }>) => {
@@ -81,9 +81,17 @@ app.post(
             const forwardUrl = process.env.FORWARD_WEBHOOK_URL
             if (forwardUrl) {
                 try {
+                    const targetAudience = new URL(forwardUrl).origin + '/'
+                    const auth = new GoogleAuth()
+                    const client = await auth.getIdTokenClient(targetAudience)
+                    const idToken = await client.idTokenProvider.fetchIdToken(targetAudience)
+
+                    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+                    if (idToken) headers['Authorization'] = `Bearer ${idToken}`
+
                     const forwardRes = await fetch(forwardUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         body: JSON.stringify(updateResult.data)
                     })
                     if (!forwardRes.ok) {

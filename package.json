@@ -1,7 +1,9 @@
 {
   "name": "snipeit-webhook",
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -13,7 +15,8 @@
     "@hono/node-server": "^1.19.9",
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.11.9",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "google-auth-library": "^9.15.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
