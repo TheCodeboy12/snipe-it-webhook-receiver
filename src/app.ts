@@ -11,7 +11,10 @@ const customLogger = (message: string, ...rest: string[]) => {
     console.log(`[${new Date().toISOString()}]`, message, ...rest)
 }
 
-/** Logs method + pathname only. Never log URL query string (contains webhook key). */
+/**
+ * Request logger that logs only method and pathname.
+ * We avoid logging the full URL so the webhook key (in ?key=...) never appears in logs.
+ */
 function safeRequestLogger() {
     return async (c: Context, next: () => Promise<void>) => {
         const pathname = new URL(c.req.url).pathname
@@ -23,6 +26,7 @@ function safeRequestLogger() {
     }
 }
 
+/** Requires callers to pass ?key=WEBHOOK_KEY so only trusted sources can hit this webhook. */
 function authByKey() {
     return async (c: Context, next: () => Promise<void>) => {
         const expectedKey = process.env.WEBHOOK_KEY
@@ -42,6 +46,7 @@ function authByKey() {
 export const app = new Hono<{ Variables: { validatedBody: WebhookBody } }>()
     .use(safeRequestLogger())
     .use(authByKey())
+    /** Parse and validate JSON body as either a webhook update or test payload before handlers run. */
     .use(async (c, next) => {
         let text: string
         try {
@@ -81,13 +86,17 @@ app.post(
             const forwardUrl = process.env.FORWARD_WEBHOOK_URL
             if (forwardUrl) {
                 try {
-                    const targetAudience = new URL(forwardUrl).origin + '/'
-                    const auth = new GoogleAuth()
-                    const client = await auth.getIdTokenClient(targetAudience)
-                    const idToken = await client.idTokenProvider.fetchIdToken(targetAudience)
-
                     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-                    if (idToken) headers['Authorization'] = `Bearer ${idToken}`
+                    // Only add Cloud Run identity token when running on GCP. K_SERVICE is set by Cloud Run
+                    // so the target service can authenticate us. Skip locally so we can forward to
+                    // unauthenticated endpoints or use other auth for testing.
+                    if (process.env.K_SERVICE) {
+                        const targetAudience = new URL(forwardUrl).origin + '/'
+                        const auth = new GoogleAuth()
+                        const client = await auth.getIdTokenClient(targetAudience)
+                        const idToken = await client.idTokenProvider.fetchIdToken(targetAudience)
+                        if (idToken) headers['Authorization'] = `Bearer ${idToken}`
+                    }
 
                     const forwardRes = await fetch(forwardUrl, {
                         method: 'POST',
